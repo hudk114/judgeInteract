@@ -3,27 +3,26 @@ let listeners = [];
 
 /**
  * get index of param0 from listener, if has not, return -1
- * once不影响比较，listener, options.capture(或useCapture), options.passive 任一不等则不是同一种事件
+ * once不影响比较，listener, options.capture(或usecapture), options.passive 任一不等则不是同一种事件
  * @param {obj} param0 event params
  */
-function getEventIndexFromListener({ type, listener, options, useCapture }) {
+function getEventIndexFromListener({ type, listener, options }) {
   if (!listeners[type]) {
     return -1;
   }
 
-  // options.capture优先级高于useCapture
-  const isCapture = (options, useCapture) =>
-    (typeof options === 'object' && options.capture) || useCapture
+  const isCapture = options =>
+    (typeof options === 'object' ? options.capture : options)
       ? true
       : false;
 
-  const isPassive = (options, useCapture) =>
+  const isPassive = options =>
     // 要全等，所以返回不能是undefined
     typeof options === 'object' && options.passive ? true : false;
 
   let outer = {
-    isCapture: isCapture(options, useCapture),
-    isPassive: isPassive(options, useCapture)
+    isCapture: isCapture(options),
+    isPassive: isPassive(options)
   };
 
   return listeners[type].findIndex(l => {
@@ -32,9 +31,8 @@ function getEventIndexFromListener({ type, listener, options, useCapture }) {
     }
 
     let o = l.options.options;
-    let u = l.options.useCapture;
     return (
-      outer.isCapture === isCapture(o, u) && outer.isPassive === isPassive(o, u)
+      outer.isCapture === isCapture(o) && outer.isPassive === isPassive(o)
     );
   });
 }
@@ -47,19 +45,21 @@ EventTarget.prototype.addInteractiveEventListener = function(
   type,
   listener,
   options,
-  useCapture
+  wantsUntrusted
 ) {
   // 判断有无注册过事件，如果注册过就不注册了
-  if (
-    listeners[type] &&
-    judgeOptions({ type, listener, options, useCapture })
-  ) {
+  if (listeners[type] && judgeOptions({
+      type,
+      listener,
+      options,
+      wantsUntrusted
+    })) {
     return;
   }
 
   let obj = {
     isUserTrigger: false,
-    options: { type, listener, options, useCapture },
+    options: { type, listener, options, wantsUntrusted },
     once: typeof options === 'object' && options.once
   };
 
@@ -89,14 +89,13 @@ EventTarget.prototype.addInteractiveEventListener = function(
   listeners[type] = listeners[type] || [];
   listeners[type].push(obj);
 
-  this.addEventListener(type, obj.listener, options, useCapture);
+  this.addEventListener(type, obj.listener, options, wantsUntrusted);
 };
 
 EventTarget.prototype.removeInteractiveEventListener = function(
   type,
   listener,
-  options,
-  useCapture
+  options
 ) {
   if (!listeners[type]) {
     return;
@@ -104,8 +103,7 @@ EventTarget.prototype.removeInteractiveEventListener = function(
   let index = getEventIndexFromListener({
     type,
     listener,
-    options,
-    useCapture
+    options
   });
   if (index === -1) {
     return;
@@ -114,5 +112,5 @@ EventTarget.prototype.removeInteractiveEventListener = function(
   let obj = listeners[type][index];
   listeners[type].splice(index, 1);
 
-  this.removeEventListener(type, obj.listener, options, useCapture);
+  this.removeEventListener(type, obj.listener, options);
 };

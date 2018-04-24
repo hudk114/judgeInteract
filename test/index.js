@@ -17,11 +17,11 @@ let clickCal = {
 };
 
 add.addEventListener('click', _ => {
-  user.addInteractEventListener('click', clickCal, { once: true });
+  user.addInteractiveEventListener('click', clickCal, { once: true });
 });
 
 remove.addEventListener('click', _ => {
-  user.removeInteractEventListener('click', clickCal);
+  user.removeInteractiveEventListener('click', clickCal);
 });
 
 prog.addEventListener('click', _ => {
